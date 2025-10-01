@@ -1,0 +1,23 @@
+namespace PRN232_Assignment1.DTO.Response;
+
+public class PaginatedResponseDto<T>
+{
+    public IEnumerable<T> Data { get; set; } = new List<T>();
+    public int CurrentPage { get; set; }
+    public int PageSize { get; set; }
+    public int TotalItems { get; set; }
+    public int TotalPages { get; set; }
+    public bool HasPreviousPage { get; set; }
+    public bool HasNextPage { get; set; }
+
+    public PaginatedResponseDto(IEnumerable<T> data, int currentPage, int pageSize, int totalItems)
+    {
+        Data = data;
+        CurrentPage = currentPage;
+        PageSize = pageSize;
+        TotalItems = totalItems;
+        TotalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+        HasPreviousPage = currentPage > 1;
+        HasNextPage = currentPage < TotalPages;
+    }
+}
