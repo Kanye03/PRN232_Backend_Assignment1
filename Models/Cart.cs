@@ -49,3 +49,5 @@ public class CartItem
     public decimal TotalPrice => Price * Quantity;
 }
 
+
+

@@ -152,8 +152,8 @@ public class OrderController : ControllerBase
 
     private string? GetCurrentUserId()
     {
-        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? 
-               User.FindFirst("sub")?.Value;
+        // Supabase user id is in 'sub'
+        return User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     }
 }
 
@@ -161,4 +161,5 @@ public class UpdateOrderStatusDto
 {
     public OrderStatus Status { get; set; }
 }
+
 

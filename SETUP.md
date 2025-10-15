@@ -73,3 +73,5 @@ The application uses MongoDB for data persistence. Collections:
 - `Carts` - User shopping carts
 - `Orders` - User orders
 
+
+

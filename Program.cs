@@ -1,4 +1,4 @@
-using MongoDB.Driver;
+﻿using MongoDB.Driver;
 using PRN232_Assignment1.Data;
 using PRN232_Assignment1.IRepositories;
 using PRN232_Assignment1.IServices;
@@ -8,6 +8,11 @@ using DotNetEnv;
 using Supabase;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using System.Net.Http;
+using System.Text.Json;
+using System.Security.Claims;
+using Microsoft.OpenApi.Models;
 
 // Load .env file
 Env.Load();
@@ -47,25 +52,51 @@ builder.Services.AddSingleton<ProductContext>(serviceProvider =>
     return new ProductContext(mongoClient, databaseName);
 });
 
+var jwksUri = $"{supabaseUrl!.TrimEnd('/')}/auth/v1/.well-known/jwks.json";
+
+// Fetch JWKS 1 lần khi app start
+using var http = new HttpClient();
+var jwksJson = await http.GetStringAsync(jwksUri);
+var jwks = new JsonWebKeySet(jwksJson);
+
+
 // Add Authentication
-var supabaseProjectRef = Environment.GetEnvironmentVariable("SUPABASE_PROJECT_REF");
-if (!string.IsNullOrWhiteSpace(supabaseProjectRef))
-{
-    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-        .AddJwtBearer(options =>
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.IncludeErrorDetails = true;
+        options.RequireHttpsMetadata = true;
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            options.Authority = $"https://{supabaseProjectRef}.supabase.co/auth/v1";
-            options.TokenValidationParameters = new TokenValidationParameters
+            ValidateIssuer = true,
+            ValidIssuer = $"{supabaseUrl.TrimEnd('/')}/auth/v1",
+
+            ValidateAudience = true,
+            ValidAudience = "authenticated",
+
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(5),
+
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKeys = jwks.Keys,
+            ValidAlgorithms = new[] { SecurityAlgorithms.EcdsaSha256 } // Supabase use ES256 (ECDSA with SHA-256)
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = ctx =>
             {
-                ValidateIssuer = true,
-                ValidIssuer = $"https://{supabaseProjectRef}.supabase.co/auth/v1",
-                ValidateAudience = false,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true
-            };
-            options.MetadataAddress = $"https://{supabaseProjectRef}.supabase.co/auth/v1/.well-known/openid-configuration";
-        });
-}
+                Console.WriteLine("Auth failed: " + ctx.Exception);
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = ctx =>
+            {
+                Console.WriteLine("Token OK for user: " +
+                                  ctx.Principal?.FindFirstValue(ClaimTypes.NameIdentifier));
+                return Task.CompletedTask;
+            }
+        };
+    });
 
 // Register repositories and services
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
@@ -93,7 +124,39 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "PRN232 Assignment API",
+        Version = "v1"
+    });
+
+    // Add Bearer token (JWT) support in Swagger UI
+    var securityScheme = new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Description = "Enter 'Bearer {token}'",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = JwtBearerDefaults.AuthenticationScheme,
+        BearerFormat = "JWT",
+        Reference = new OpenApiReference
+        {
+            Type = ReferenceType.SecurityScheme,
+            Id = JwtBearerDefaults.AuthenticationScheme
+        }
+    };
+
+    c.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, securityScheme);
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            securityScheme,
+            Array.Empty<string>()
+        }
+    });
+});
 
 var app = builder.Build();
 

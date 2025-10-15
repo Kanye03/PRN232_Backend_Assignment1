@@ -8,6 +8,7 @@ namespace PRN232_Assignment1.Controllers;
 
 [ApiController]
 [Route("api/products")]
+[Authorize]
 public class ProductController : ControllerBase
 {
     private readonly IProductService _productService;
@@ -59,7 +60,6 @@ public class ProductController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize]
     public async Task<IActionResult> AddProduct([FromForm] DTO.Request.ProductFormModel formModel)
     {
         try
@@ -97,7 +97,6 @@ public class ProductController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize]
     public async Task<IActionResult> UpdateProduct(string id, [FromForm] DTO.Request.ProductFormModel formModel)
     {
         try
@@ -139,7 +138,6 @@ public class ProductController : ControllerBase
     }
     
     [HttpDelete("{id}")]
-    [Authorize]
     public async Task<IActionResult> DeleteProduct(string id)
     {
         try

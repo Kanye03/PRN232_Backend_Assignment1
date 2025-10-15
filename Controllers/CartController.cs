@@ -198,8 +198,9 @@ public class CartController : ControllerBase
 
     private string? GetCurrentUserId()
     {
-        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? 
-               User.FindFirst("sub")?.Value;
+        // Supabase user id is in 'sub'
+        return User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     }
 }
+
 
