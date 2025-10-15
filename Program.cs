@@ -6,6 +6,8 @@ using PRN232_Assignment1.Repositories;
 using PRN232_Assignment1.Services;
 using DotNetEnv;
 using Supabase;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 // Load .env file
 Env.Load();
@@ -45,9 +47,33 @@ builder.Services.AddSingleton<ProductContext>(serviceProvider =>
     return new ProductContext(mongoClient, databaseName);
 });
 
+// Add Authentication
+var supabaseProjectRef = Environment.GetEnvironmentVariable("SUPABASE_PROJECT_REF");
+if (!string.IsNullOrWhiteSpace(supabaseProjectRef))
+{
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.Authority = $"https://{supabaseProjectRef}.supabase.co/auth/v1";
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = $"https://{supabaseProjectRef}.supabase.co/auth/v1",
+                ValidateAudience = false,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true
+            };
+            options.MetadataAddress = $"https://{supabaseProjectRef}.supabase.co/auth/v1/.well-known/openid-configuration";
+        });
+}
+
 // Register repositories and services
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<ICartRepository, CartRepository>();
+builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<SupabaseStorageService>();
 
 // Add CORS
@@ -83,6 +109,7 @@ app.UseHttpsRedirection();
 // Use CORS
 app.UseCors("AllowFrontend");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

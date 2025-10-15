@@ -2,6 +2,7 @@
 using PRN232_Assignment1.DTO;
 using PRN232_Assignment1.IServices;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 
 namespace PRN232_Assignment1.Controllers;
 
@@ -17,6 +18,7 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAllProducts([FromQuery] DTO.Request.PaginationRequestDto paginationRequest)
     {
         try
@@ -35,6 +37,7 @@ public class ProductController : ControllerBase
    
 
     [HttpGet("{id}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetProductById(string id)
     {
         try
@@ -56,6 +59,7 @@ public class ProductController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> AddProduct([FromForm] DTO.Request.ProductFormModel formModel)
     {
         try
@@ -93,6 +97,7 @@ public class ProductController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize]
     public async Task<IActionResult> UpdateProduct(string id, [FromForm] DTO.Request.ProductFormModel formModel)
     {
         try
@@ -134,6 +139,7 @@ public class ProductController : ControllerBase
     }
     
     [HttpDelete("{id}")]
+    [Authorize]
     public async Task<IActionResult> DeleteProduct(string id)
     {
         try
